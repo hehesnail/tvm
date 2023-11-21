@@ -248,30 +248,31 @@ class DeviceKernelMutator : public StmtExprMutator {
         << gvar->name_hint << " did not appear within the IRModule";
     const KernelInfo& dev_info = it->second;
 
-    auto caller_target = current_target_.value();
-    auto callee_target = dev_info.target;
+    // always launch kernel even the device is same, @hxf
+    // auto caller_target = current_target_.value();
+    // auto callee_target = dev_info.target;
 
-    bool same_target = caller_target->str() == callee_target->str();
-    if (same_target) {
-      // Calls within the same target may be handled at codegen time
-      // as internal subroutine calls.
-      return std::move(node);
-    }
+    // bool same_target = caller_target->str() == callee_target->str();
+    // if (same_target) {
+    //   // Calls within the same target may be handled at codegen time
+    //   // as internal subroutine calls.
+    //   return std::move(node);
+    // }
 
-    bool same_device_type =
-        caller_target->GetTargetDeviceType() == callee_target->GetTargetDeviceType();
-    if (same_device_type) {
-      // Calls to another target using the same device (e.g. LLVM
-      // calling a custom TIRToRuntime target) do not require a kernel
-      // launch, but need to be replaced with call_extern.
-      extern_function_call_.insert(gvar);
-      Array<PrimExpr> args;
-      args.push_back(StringImm(gvar->name_hint));
-      for (const auto& arg : node->args) {
-        args.push_back(arg);
-      }
-      return Call(node->dtype, builtin::call_extern(), args);
-    }
+    // bool same_device_type =
+    //     caller_target->GetTargetDeviceType() == callee_target->GetTargetDeviceType();
+    // if (same_device_type) {
+    //   // Calls to another target using the same device (e.g. LLVM
+    //   // calling a custom TIRToRuntime target) do not require a kernel
+    //   // launch, but need to be replaced with call_extern.
+    //   extern_function_call_.insert(gvar);
+    //   Array<PrimExpr> args;
+    //   args.push_back(StringImm(gvar->name_hint));
+    //   for (const auto& arg : node->args) {
+    //     args.push_back(arg);
+    //   }
+    //   return Call(node->dtype, builtin::call_extern(), args);
+    // }
 
     ICHECK(dev_info.launch_params.defined())
         << "CallNode attempted kernel launch to " << gvar->name_hint << " on target "

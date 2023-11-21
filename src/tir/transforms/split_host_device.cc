@@ -122,6 +122,16 @@ class HostDeviceSplitter : public StmtMutator {
   std::function<GlobalVar()> var_supply_;
 };
 
+PrimFunc MarkTargetAttrStmt(PrimFunc func) {
+  auto target = func->attrs->dict[tvm::attr::kTarget];
+  auto device_target = target.as<Target>().value().WithoutHost();
+
+  Stmt new_body = AttrStmt(device_target, tvm::attr::kTarget, 0, func->body);
+  func.CopyOnWrite()->body = new_body;
+
+  return func;
+}
+
 PrimFunc SplitHostDevice(PrimFunc func, IRModule* device_mod,
                          std::function<GlobalVar()> var_supply) {
   HostDeviceSplitter splitter(device_mod, var_supply);
@@ -152,6 +162,13 @@ Pass SplitHostDevice() {
         auto var_supply = [&global_var_supply, &kernel_name]() -> GlobalVar {
           return global_var_supply->FreshGlobal(kernel_name, false);
         };
+
+        // still split host/device when target is cpu, @hxf
+        if (!func->body.as<AttrStmtNode>()) {
+          func = MarkTargetAttrStmt(func);
+          // std::cout << "target attr stmt added!" << "\n";
+        }
+        // std::cout << "new func: " << func << "\n";
 
         func = SplitHostDevice(std::move(func), &device_mod, var_supply);
         if (!func.same_as(base_func)) {
