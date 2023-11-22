@@ -122,6 +122,19 @@ class HostDeviceSplitter : public StmtMutator {
   std::function<GlobalVar()> var_supply_;
 };
 
+class DeivceAttrFinder : public StmtVisitor {
+  public:
+
+  void VisitStmt_(const AttrStmtNode* op) final {
+    if (op->attr_key == tvm::attr::kTarget) {
+      device_attr_existed_ = true;
+    }
+    StmtVisitor::VisitStmt_(op);
+  }
+  // attr stmt existed
+  bool device_attr_existed_ = false;
+};
+
 PrimFunc MarkTargetAttrStmt(PrimFunc func) {
   auto target = func->attrs->dict[tvm::attr::kTarget];
   auto device_target = target.as<Target>().value().WithoutHost();
@@ -163,12 +176,17 @@ Pass SplitHostDevice() {
           return global_var_supply->FreshGlobal(kernel_name, false);
         };
 
+        // std::cout << "@@@@@@@@@@ prev func: " << func << "\n";
+
         // still split host/device when target is cpu, @hxf
-        if (!func->body.as<AttrStmtNode>()) {
+        DeivceAttrFinder attrFinder;
+        attrFinder(func->body);
+        if (!attrFinder.device_attr_existed_) {
           func = MarkTargetAttrStmt(func);
           // std::cout << "target attr stmt added!" << "\n";
         }
-        // std::cout << "new func: " << func << "\n";
+        // std::cout << "device attr found: " << attrFinder.device_attr_existed_ << "\n";
+        // std::cout << "\n######### after judge func: " << func << "\n";
 
         func = SplitHostDevice(std::move(func), &device_mod, var_supply);
         if (!func.same_as(base_func)) {
