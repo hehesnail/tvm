@@ -11,13 +11,13 @@ from nnop_random import RandomNCHW
 
 from nn_codegen import Codegen
 import nn_codegen
-# @auto_scheduler.register_workload
-# def conv2d_layer(N, H, W, CO, CI, KH, KW, stride, padding):
-#     data = te.placeholder((N, CI, H, W), name="data")
-#     kernel = te.placeholder((CO, CI, KH, KW), name="kernel")
-#     bias = te.placeholder((1, CO, 1, 1), name="bias")
-#     conv = topi.nn.conv2d_nchw(data, kernel, stride, padding, dilation=1, out_dtype="float32")
-#     return [data, kernel, bias, conv]
+@auto_scheduler.register_workload
+def conv2d(N, H, W, CO, CI, KH, KW, stride, padding):
+    data = te.placeholder((N, CI, H, W), name="data")
+    kernel = te.placeholder((CO, CI, KH, KW), name="kernel")
+    bias = te.placeholder((1, CO, 1, 1), name="bias")
+    conv = topi.nn.conv2d_nchw(data, kernel, stride, padding, dilation=1, out_dtype="float32")
+    return [data, kernel, bias, conv]
 
 @auto_scheduler.register_workload
 def adaptive_pool(N,C,H,W):
