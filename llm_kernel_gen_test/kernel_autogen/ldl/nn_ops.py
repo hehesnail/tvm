@@ -26,6 +26,21 @@ def adaptive_pool(N,C,H,W):
     out = topi.nn.adaptive_pool(data, output_size, layout='NCHW', pool_type='avg')
     return [data,out]
 
+@auto_scheduler.register_workload
+def add(N,C,H,W):
+    lhs = te.placeholder((N,C,H,W), name='lhs')
+    rhs = te.placeholder((N,C,H,W), name='rhs')
+    out = topi.nn.add(lhs,rhs)
+    return [lhs,rhs,out]
+
+@auto_scheduler.register_workload
+def rms_norm(N,C,H,W):
+    data = te.placeholder((N,C,H,W), name='data')
+    weight = te.placeholder((N,C,H,W), name='weight')
+    axis = [1,2,3]
+    out = topi.nn.rms_norm(data,weight,axis)
+    return [data,weight,axis,out]
+
     
 def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='data.json'):
     op_data = {
@@ -38,9 +53,6 @@ def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='data.json'
     with open(save_file, 'a') as f:
         f.write(json_str + '\n')
 
-success_count = 0
-failure_count = 0
-
 def save_code(codegen_test,op_origin_name, operation, op_args_generator,max_attempts=10):
     attempts = 0
     global success_count
@@ -48,26 +60,33 @@ def save_code(codegen_test,op_origin_name, operation, op_args_generator,max_atte
     while attempts < max_attempts:
         op_args_generator.randomize_params()
         op_args = op_args_generator.get_param_values()
-        try:
-            c_code, ir_code = codegen_test.c_codegen(topi_ops=operation, op_args=op_args)
-            cuda_code = codegen_test.cuda_codegen(topi_ops=operation, op_args=op_args)
-            op_name = op_origin_name + str(op_args).replace(",", "_").replace(" ", "_")
-            write_json_to_file(op_name, c_code, cuda_code, ir_code)
-            success_count += 1
-            attempts += 1
-        except Exception as e:
-            print(f"Code generation failed: {e}")
-            failure_count += 1
-            attempts += 1
 
-op_args_generator = RandomNCHW()#conv_op.randomize_params()   #1改这个，随机生成参数的
+        c_code, ir_code = codegen_test.c_codegen(topi_ops=operation, op_args=op_args)
+        cuda_code = codegen_test.cuda_codegen(topi_ops=operation, op_args=op_args)
+        op_name = op_origin_name + str(op_args).replace(",", "_").replace(" ", "_")
+        write_json_to_file(op_name, c_code, cuda_code, ir_code)
+        success_count += 1
+        attempts += 1
 
-codegen_test = Codegen()# 2,全流程都一样，c，cuda，ir
+        # try:
+        #     c_code, ir_code = codegen_test.c_codegen(topi_ops=operation, op_args=op_args)
+        #     cuda_code = codegen_test.cuda_codegen(topi_ops=operation, op_args=op_args)
+        #     op_name = op_origin_name + str(op_args).replace(",", "_").replace(" ", "_")
+        #     write_json_to_file(op_name, c_code, cuda_code, ir_code)
+        #     success_count += 1
+        #     attempts += 1
+        # except Exception as e:
+        #     print(f"Code generation failed: {e}")
+        #     failure_count += 1
+        #     attempts += 1
 
-# 调用函数
-save_code(codegen_test,"adaptive_pool", adaptive_pool,op_args_generator=op_args_generator)  #3. 调用函数
-
-
-print(f"成功个数：{success_count}")
-print(f"失败个数：{failure_count}")
+if __name__ == "__main__":
+    success_count = 0
+    failure_count = 0
+    op_args_generator = RandomNCHW()#conv_op.randomize_params()   #1改这个，随机生成参数的
+    codegen_test = Codegen()# 2,全流程都一样，c，cuda，ir
+    # 调用函数
+    save_code(codegen_test,"rms_norm", rms_norm,op_args_generator=op_args_generator)  #3. 调用函数
+    print(f"成功个数：{success_count}")
+    print(f"失败个数：{failure_count}")
 
