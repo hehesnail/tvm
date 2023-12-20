@@ -89,7 +89,7 @@ class Codegen:
         cuda_code = cuda_module.imported_modules[0].get_source()
         return cuda_code
 
-def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='data.json'):
+def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='test_data.json'):
     op_data = {
         'op_name': op_name,
         'c_code': c_code,
@@ -98,7 +98,7 @@ def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='data.json'
     }
     json_str = json.dumps(op_data)
     with open(save_file, 'a') as f:
-        f.write(json_str + '\n')
+        f.write(json_str + ',\n')
 
 
 

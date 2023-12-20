@@ -7,7 +7,7 @@ from tvm.auto_scheduler import _ffi_api
 from tvm.topi.utils import get_const_tuple
 from tvm.topi.sparse.utils import random_bsr_matrix
 import json
-from nnop_random import RandomNCHW
+from nnop_random import RandomNCHW,RandomConvOperator,RandomNCDHW
 
 from nn_codegen import Codegen
 import nn_codegen
@@ -20,14 +20,20 @@ def conv2d(N, H, W, CO, CI, KH, KW, stride, padding):
     return [data, kernel, bias, conv]
 
 @auto_scheduler.register_workload
-def adaptive_pool(N,C,H,W):
+def adaptive_pool_avg(N,C,H,W):
     data = te.placeholder((N,C,H,W), name='data')
     output_size = (8, 8)
     out = topi.nn.adaptive_pool(data, output_size, layout='NCHW', pool_type='avg')
     return [data,out]
 
-    
-def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='data.json'):
+@auto_scheduler.register_workload
+def adaptive_pool_max(N,C,H,W):
+    data = te.placeholder((N,C,H,W), name='data')
+    output_size = (8, 8)
+    out = topi.nn.adaptive_pool(data, output_size, layout='NCHW', pool_type='max')
+    return [data,out]
+
+def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='just_data.json'):
     op_data = {
         'op_name': op_name,
         'c_code': c_code,
@@ -65,7 +71,7 @@ op_args_generator = RandomNCHW()#conv_op.randomize_params()   #1改这个，随�
 codegen_test = Codegen()# 2,全流程都一样，c，cuda，ir
 
 # 调用函数
-save_code(codegen_test,"adaptive_pool", adaptive_pool,op_args_generator=op_args_generator)  #3. 调用函数
+save_code(codegen_test,"adaptive_pool_max", adaptive_pool_max,op_args_generator=op_args_generator)  #3. 调用函数
 
 
 print(f"成功个数：{success_count}")

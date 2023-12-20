@@ -59,6 +59,7 @@ class RandomNCHW:
 
     def get_param_values(self):
         return [value for value in self.params.values()]
+
 # 使用示例
 # conv_op = RandomConvOperator()
 # conv_op.randomize_params()
