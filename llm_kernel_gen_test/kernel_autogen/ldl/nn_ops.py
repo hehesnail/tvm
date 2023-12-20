@@ -7,10 +7,12 @@ from tvm.auto_scheduler import _ffi_api
 from tvm.topi.utils import get_const_tuple
 from tvm.topi.sparse.utils import random_bsr_matrix
 import json
-from nnop_random import RandomNCHW,RandomConvOperator,RandomNCDHW
+from nnop_random import RandomNCHW,RandomConvOperator,RandomMatmul
 
 from nn_codegen import Codegen
 import nn_codegen
+
+# RandomConvOperator
 @auto_scheduler.register_workload
 def conv2d(N, H, W, CO, CI, KH, KW, stride, padding):
     data = te.placeholder((N, CI, H, W), name="data")
@@ -19,6 +21,7 @@ def conv2d(N, H, W, CO, CI, KH, KW, stride, padding):
     conv = topi.nn.conv2d_nchw(data, kernel, stride, padding, dilation=1, out_dtype="float32")
     return [data, kernel, bias, conv]
 
+#  RandomNCHW
 @auto_scheduler.register_workload
 def adaptive_pool_avg(N,C,H,W):
     data = te.placeholder((N,C,H,W), name='data')
@@ -32,6 +35,28 @@ def adaptive_pool_max(N,C,H,W):
     output_size = (8, 8)
     out = topi.nn.adaptive_pool(data, output_size, layout='NCHW', pool_type='max')
     return [data,out]
+
+@auto_scheduler.register_workload
+def add(N,C,H,W):
+    data_a = te.placeholder((N,C,H,W), name='data')
+    data_b = te.placeholder((N,C,H,W), name='data')
+    out = tvm.topi.nn.add(data_a, data_b)
+    return [data_a,data_b,out]
+
+# RandomMatmul
+@auto_scheduler.register_workload
+def batch_matmul(batch, K,M,N):
+    data_a = te.placeholder((batch, K,M), name='data_a')
+    data_b = te.placeholder((batch, N,M), name='data_b')
+    out = tvm.topi.nn.batch_matmul(data_a, data_b)
+    return [data_a,data_b,out]
+
+@auto_scheduler.register_workload
+def test(batch, K,M,N):
+    data_a = te.placeholder((batch, K,M), name='data_a')
+    data_b = te.placeholder((batch, N,M), name='data_b')
+    out = tvm.topi.nn.batch_matmul(data_a, data_b)
+    return [data_a,data_b,out]
 
 def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='just_data.json'):
     op_data = {
@@ -53,7 +78,9 @@ def save_code(codegen_test,op_origin_name, operation, op_args_generator,max_atte
     global failure_count
     while attempts < max_attempts:
         op_args_generator.randomize_params()
+
         op_args = op_args_generator.get_param_values()
+        print(*op_args)
         try:
             c_code, ir_code = codegen_test.c_codegen(topi_ops=operation, op_args=op_args)
             cuda_code = codegen_test.cuda_codegen(topi_ops=operation, op_args=op_args)
@@ -66,12 +93,12 @@ def save_code(codegen_test,op_origin_name, operation, op_args_generator,max_atte
             failure_count += 1
             attempts += 1
 
-op_args_generator = RandomNCHW()#conv_op.randomize_params()   #1改这个，随机生成参数的
+op_args_generator = RandomMatmul()#conv_op.randomize_params()   #1改这个，随机生成参数的
 
 codegen_test = Codegen()# 2,全流程都一样，c，cuda，ir
 
 # 调用函数
-save_code(codegen_test,"adaptive_pool_max", adaptive_pool_max,op_args_generator=op_args_generator)  #3. 调用函数
+save_code(codegen_test,"batch_matmul", batch_matmul,op_args_generator=op_args_generator)  #3. 调用函数
 
 
 print(f"成功个数：{success_count}")

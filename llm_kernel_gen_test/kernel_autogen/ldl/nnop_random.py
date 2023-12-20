@@ -39,6 +39,24 @@ class RandomConvOperator:
     def get_param_values(self):
         return [value for value in self.params.values()]
 
+class RandomMatmul:
+    def __init__(self,batch=2, K=8,M=8,N=8):
+        self.params = {
+            'batch': batch,
+            'K': K,
+            'M': M,
+            'N': N
+        }
+        self.randomize_params()
+
+    def randomize_params(self):
+        self.params['batch'] = random.randint(1, 10)
+        self.params['K'] = random.randint(1, 10) 
+        self.params['M'] = random.randint(1, 10) 
+        self.params['N'] = random.randint(1, 10) 
+
+    def get_param_values(self):
+        return [value for value in self.params.values()]
 
 
 class RandomNCHW:
