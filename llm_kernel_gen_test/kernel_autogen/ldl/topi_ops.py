@@ -8,13 +8,25 @@ import io
 import shutil
 import json
 
-A = None
+import signal
+import time
+
+
+# A tensor,B tensor
+A = None  
+B = None
 idx = 0
+
+bool_tensors = ['all']
+
+idx_2d = 0 
 success_count = 0
 failure_count = 0
 failed_case = []
 ops_json_data = []
 topi_operators_1d = []
+
+topi_operators_2d = []
 filename = "data.json"
 log_file = "codegen.json"
 
@@ -29,45 +41,38 @@ def reload_file(log_file):
             pass
 
 def add_ops():
-    # 添加topi算子到列表中
-    # topi_operators_1d.append(topi.sum)
-    # topi_operators_1d.append(topi.cosh)
-    # topi_operators_1d.append(topi.cos)
-    # topi_operators_1d.append(topi.acos)
-    # topi_operators_1d.append(topi.asin)
+    topi_operators_1d.append(topi.abs)
+    topi_operators_1d.append(topi.acos)
+    topi_operators_1d.append(topi.acosh)
+    topi_operators_1d.append(topi.asin)
     topi_operators_1d.append(topi.asinh)
     topi_operators_1d.append(topi.atan)
     topi_operators_1d.append(topi.atanh)
     topi_operators_1d.append(topi.ceil)
-    topi_operators_1d.append(topi.clip)
-    topi_operators_1d.append(topi.const_vector)
-    topi_operators_1d.append(topi.const_vector)
-    topi_operators_1d.append(topi.const_vector)
-    topi_operators_1d.append(topi.const_vector)
+    topi_operators_1d.append(topi.ceil_log2)
+    topi_operators_1d.append(topi.cos)
+    topi_operators_1d.append(topi.cosh)
     topi_operators_1d.append(topi.erf)
     topi_operators_1d.append(topi.exp)
     topi_operators_1d.append(topi.fast_erf)
     topi_operators_1d.append(topi.fast_exp)
     topi_operators_1d.append(topi.fast_tanh)
-    topi_operators_1d.append(topi.fixed_point_multiply)
-    topi_operators_1d.append(topi.flip)
     topi_operators_1d.append(topi.floor)
-    topi_operators_1d.append(topi.full_like)
+    topi_operators_1d.append(topi.identity)
+    topi_operators_1d.append(topi.invert_permutation)
+    topi_operators_1d.append(topi.isfinite)
+    topi_operators_1d.append(topi.isinf)
     topi_operators_1d.append(topi.isnan)
     topi_operators_1d.append(topi.log)
     topi_operators_1d.append(topi.log10)
     topi_operators_1d.append(topi.log2)
+    topi_operators_1d.append(topi.logical_not)
     topi_operators_1d.append(topi.max)
     topi_operators_1d.append(topi.min)
+    topi_operators_1d.append(topi.ndarray_size)
     topi_operators_1d.append(topi.negative)
-    topi_operators_1d.append(topi.prod)
-    topi_operators_1d.append(topi.reinterpret)
-    topi_operators_1d.append(topi.repeat)
-    topi_operators_1d.append(topi.reshape)
-    topi_operators_1d.append(topi.reshape)
     topi_operators_1d.append(topi.round)
     topi_operators_1d.append(topi.rsqrt)
-    topi_operators_1d.append(topi.shape)
     topi_operators_1d.append(topi.sigmoid)
     topi_operators_1d.append(topi.sign)
     topi_operators_1d.append(topi.sin)
@@ -75,23 +80,64 @@ def add_ops():
     topi_operators_1d.append(topi.sqrt)
     topi_operators_1d.append(topi.tan)
     topi_operators_1d.append(topi.tanh)
-    topi_operators_1d.append(topi.tile)
+    topi_operators_1d.append(topi.all)
+    topi_operators_1d.append(topi.any)
+    topi_operators_1d.append(topi.flip)
+
+
+def add_2dops():
+    topi_operators_2d.append(topi.add)
+    topi_operators_2d.append(topi.divide)
+    topi_operators_2d.append(topi.equal)
+    topi_operators_2d.append(topi.floor_divide)
+    topi_operators_2d.append(topi.floor_mod)
+    topi_operators_2d.append(topi.greater)
+    topi_operators_2d.append(topi.greater_equal)
+    topi_operators_2d.append(topi.less)
+    topi_operators_2d.append(topi.less_equal)
+    topi_operators_2d.append(topi.logical_and)
+    topi_operators_2d.append(topi.logical_or)
+    topi_operators_2d.append(topi.logical_xor)
+    topi_operators_2d.append(topi.maximum)
+    topi_operators_2d.append(topi.minimum)
+    topi_operators_2d.append(topi.mod)
+    topi_operators_2d.append(topi.multiply)
+    topi_operators_2d.append(topi.not_equal)
+    topi_operators_2d.append(topi.power)
+    topi_operators_2d.append(topi.right_shift)
+    topi_operators_2d.append(topi.subtract)
 
 def topi_operation( dtype,func):
     global A 
     out = func(A)
     return [A, out]
 
+def topi_2d_operation( dtype,func):
+    global A 
+    global B
+    out = func(A,B)
+    return [A,B, out]
+
 @auto_scheduler.register_workload
 def topi_ops(dtype,*args ,func=""):
     return topi_operation( dtype,topi_operators_1d[idx])
 
+@auto_scheduler.register_workload
+def topi_2d_ops(dtype,*args ,func=""):
+    return topi_2d_operation( dtype,topi_operators_2d[idx_2d])
+
+
 class DummyFile(io.StringIO):
     def write(self, x):
         pass
-def c_codegen(search_times = 2,shape = "",verbose_key=0):
+
+
+def c_codegen(search_times = 2,shape = "",verbose_key=0,nd_tensors_numbers = 1):
     target_c = tvm.target.Target("llvm")
-    task_c = tvm.auto_scheduler.SearchTask(func=topi_ops, args=("float32",*(int(x) for x in shape) ), target=target_c)
+    if nd_tensors_numbers == 1:
+        task_c = tvm.auto_scheduler.SearchTask(func=topi_ops, args=("float32",*(int(x) for x in shape) ), target=target_c)
+    if nd_tensors_numbers == 2:
+        task_c = tvm.auto_scheduler.SearchTask(func=topi_2d_ops, args=("float32",*(int(x) for x in shape) ), target=target_c)
 
     reload_file(log_file)
     tune_option = auto_scheduler.TuningOptions(
@@ -110,9 +156,12 @@ def c_codegen(search_times = 2,shape = "",verbose_key=0):
 
     return c_code,str(lowered_ir)
 
-def cuda_codegen(search_times = 2,shape = "",verbose_key=0):
+def cuda_codegen(search_times = 2,shape = "",verbose_key=0,nd_tensors_numbers = 1):
     target_cuda = tvm.target.Target("cuda")
-    task_cuda = tvm.auto_scheduler.SearchTask(func=topi_ops, args=("float32",*(int(x) for x in shape) ), target=target_cuda)
+    if nd_tensors_numbers == 1:
+        task_cuda = tvm.auto_scheduler.SearchTask(func=topi_ops, args=("float32",*(int(x) for x in shape) ), target=target_cuda)
+    if nd_tensors_numbers == 2:
+        task_cuda = tvm.auto_scheduler.SearchTask(func=topi_2d_ops, args=("float32",*(int(x) for x in shape) ), target=target_cuda)
 
     reload_file(log_file)
     tune_option = auto_scheduler.TuningOptions(
@@ -150,14 +199,9 @@ def create_dir(folder_path):
 def json_file(filename):
     global ops_json_data
     with open(filename, 'a') as file:
-        # for item in ops_json_data:
         file.seek(0,2)
         file.write(json.dumps(ops_json_data)+'\n')
-    # all_ops_json = json.dumps(ops_json_data, indent=4)
 
-N = L = M = 64 #TODO hannibal for random shape
-add_ops()
-max_1d_len = len(topi_operators_1d)
 
 
 c_path    = "generate/c/"
@@ -166,36 +210,107 @@ create_dir(cuda_path)
 create_dir(c_path)
 
 
+add_ops()
+add_2dops()
+max_1d_len = len(topi_operators_1d)
+max_2d_len = len(topi_operators_2d)
 
 
 
-for i in range(max_1d_len):
-    name = topi_operators_1d[idx].__name__
-    for i in range(1,4):
-        # for j in range(5):
-            print("success_count:"+str(success_count))
-            print("failure_count:"+str(failure_count))
-            random_shape = tuple(np.random.randint(4, 10, size=i))
-            A = te.placeholder(random_shape, name="tarray",dtype="float32")
-            print(random_shape)
-            print(A)
+def handle_timeout(signum, frame):
+    raise KeyboardInterrupt('Timeout occurred.')  # 强制抛出 KeyboardInterrupt 异常
 
-            op_name = name + str(random_shape).replace(",", "_").replace(" ", "_")
+for i in range(max_2d_len):
+    name = topi_operators_2d[idx_2d].__name__
+    for i in range(1, 7):
+        for j in range(5):
+            random_shape = tuple(np.random.randint(4, 30, size=i))
+            A = te.placeholder(random_shape, name="tarray", dtype="float32")
+            B = te.placeholder(random_shape, name="tarray", dtype="float32")
+            op_name = name
             try:
                 print("c_codegen")
-                c_code,ir_code = c_codegen(shape=random_shape,verbose_key=False,search_times=4)
+                signal.signal(signal.SIGALRM, handle_timeout)  # 设置信号处理函数
+                signal.alarm(60*10)  # 设置定时器
+                c_code, ir_code = c_codegen(shape=random_shape, verbose_key=False, search_times=4, nd_tensors_numbers=2)
+                signal.alarm(0)  # 取消定时器
+
                 print("cuda_codegen")
-                cuda_code = cuda_codegen(shape=random_shape,verbose_key=False,search_times=4)
+                signal.signal(signal.SIGALRM, handle_timeout)  # 设置信号处理函数
+                signal.alarm(60*10)  # 设置定时器
+                cuda_code = cuda_codegen(shape=random_shape, verbose_key=False, search_times=4, nd_tensors_numbers=2)
+                signal.alarm(0)  # 取消定时器
+
+                shape_str = '_'.join(map(str, random_shape))
                 op_data = {
-                'op_name': op_name,
-                'c_code': c_code,
-                'cuda_code': cuda_code,
-                'ir_code': ir_code
+                    'op_name': op_name,
+                    'c_code': c_code,
+                    'cuda_code': cuda_code,
+                    'ir_code': ir_code,
+                    'shape': shape_str
                 }
                 json_str = json.dumps(op_data)
 
                 # Write the JSON string to file
-                with open('data.json', 'a') as f:
+                with open('topi_data_2d_nobroadcast.json', 'a') as f:
+                    f.write(json_str + '\n')
+                # ops_json_data.append(op_data)
+
+                save_string_to_file(c_code, c_path + op_name + ".c")
+                save_string_to_file(cuda_code, cuda_path + op_name + ".cu")
+                success_count += 1
+
+            except KeyboardInterrupt as e:
+                print(f"Timeout occurred while processing {name}. Skipping to next iteration.")
+                continue
+
+            except Exception as e:
+                print(f"An error occurred while processing {name}: {e}")
+                failure_count += 1
+                failed_case.append(name + str(random_shape))
+                continue
+    idx_2d += 1
+
+
+for i in range(max_1d_len):
+    name = topi_operators_1d[idx].__name__
+    for i in range(1,7):
+        for j in range(5):
+            print("success_count:"+str(success_count))
+            print("failure_count:"+str(failure_count))
+            random_shape = tuple(np.random.randint(4, 10, size=i))
+            if name in bool_tensors:
+                A = te.placeholder(random_shape, name="tarray",dtype="bool")
+            else:
+                A = te.placeholder(random_shape, name="tarray",dtype="float32")
+            # op_name = name + str(random_shape).replace(",", "_").replace(" ", "_")
+            op_name = name
+            try:
+                print("c_codegen")
+                signal.signal(signal.SIGALRM, handle_timeout)  # 设置信号处理函数
+                signal.alarm(60*10)  # 设置定时器
+                c_code,ir_code = c_codegen(shape=random_shape,verbose_key=False,search_times=10)
+                signal.alarm(0)  # 取消定时器
+
+                print("cuda_codegen")
+                signal.signal(signal.SIGALRM, handle_timeout)  # 设置信号处理函数
+                signal.alarm(60*10)  # 设置定时器
+                cuda_code = cuda_codegen(shape=random_shape,verbose_key=False,search_times=10)
+                signal.alarm(0)  # 取消定时器
+
+
+                shape_str = '_'.join(map(str, random_shape))
+                op_data = {
+                    'op_name': op_name,
+                    'c_code': c_code,
+                    'cuda_code': cuda_code,
+                    'ir_code': ir_code,
+                    'shape': shape_str
+                }
+                json_str = json.dumps(op_data)
+                
+                # Write the JSON string to file
+                with open('topi_data_1d_nobroadcast.json', 'a') as f:
                     f.write(json_str + '\n')
                 # ops_json_data.append(op_data)
 
@@ -216,39 +331,58 @@ print(f"Failed to process {failure_count} operators:")
 for i in failed_case:
     print(i)
 
-# cuda_code = cuda_module.imported_modules[0].get_source()
 
 
 
-# print("Lowered TIR:")
-# print(tvm.lower(sch, args, simple_mode=True))
-
-# print(tvm.build(sch, args,"c").imported_modules[0].get_source())
-# print(args)
-
-
-# a_np = np.random.uniform(size=(N,L)).astype(np.float32)
-# out_np = np.cosh(a_np)
 
 
 
-# dev = tvm.cpu()
-# a_tvm = tvm.nd.array(a_np, device=dev)
-# out_tvm = tvm.nd.empty(out_np.shape, device=dev,dtype="float32")
 
 
-# ans(a_tvm,out_tvm)
+
+#wrong:
+# Cast,binary_search,collapse_sum,const_vector,decl_buffer
+# bitwise_and,bitwise_not,bitwise_or,bitwise_xor,expand_like
+# extern,fixed_point_multiply,full
+# hybrid_argwhere_1d,scanop
 
 
-# np.testing.assert_allclose(out_np, out_tvm.numpy(), rtol=1e-3)
-# evaluator = ans.time_evaluator(ans.entry_name, dev, min_repeat_ms=500)
+#relay
 
-# print(
-#     "Execution time of this operator: %.3f ms"
-#     % (np.median(evaluator(a_tvm,out_tvm).results) * 1000)
-# )
+# dft,einsum
 
-# print("Equivalent python schedule:")
-# print(task.print_best(log_file))
 
-json_file(filename)
+#tvm.ir.Attrs
+# erf_legalize
+
+#2d
+#fixed_point_multiply_per_axis
+
+
+#1d
+# abs,acos,acosh,asin,asinh,atan,atanh,ceil,ceil_log2,cos,cosh,
+# erf,exp,fast_erf,fast_exp,fast_tanh,floor,identity,invert_permutation,
+# isfinite,isinf,isnan,log,log10,log2,logical_not,max,min,ndarray_size,
+# negative,round,rsqrt,sigmoid,sign,sin,sinh,sqrt,tan,tanh
+
+
+#2d
+# add,divide,equal,floor_divide,floor_mod,greater,greater_equal,less
+# less_equal,logical_and,logical_or,logical_xor,maximum,minimum,mod,multiply,
+# not_equal,power,right_shift,subtract,
+
+#3d 
+
+#1d special
+# all,any,arange,argmax,argmin,argsort,cumprod,cumsum,flip
+# adv_index,broadcast_to,cast,expand_dims,gather,gather_nd
+# clip(x,MIN,MAX),prod,reinterpret,repeat,reshape,sort,squeeze,stack,sum,
+# 
+# layout_transform
+
+#2d special
+
+#3d special
+
+#nd special
+# concatenate(a_tuple, axis=0),elemwise_sum
