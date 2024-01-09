@@ -12,6 +12,9 @@ from nnop_random import RandomNCHW,RandomConvOperator,RandomMatmul, RandomNCHW32
 from nn_codegen import Codegen
 import nn_codegen
 
+
+import signal
+import time
 # RandomConvOperator
 @auto_scheduler.register_workload
 def conv2d_nchw(N, H, W, CO, CI, KH, KW, stride, padding):
@@ -515,19 +518,44 @@ def matmul(batch, K,M,N):
     return [data_a,data_b,out]
 
 
-def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='conv_data.json'):
-    op_data = {
-        'op_name': op_name,
-        'c_code': c_code,
-        'cuda_code': cuda_code,
-        'ir_code': ir_code
-    }
-    json_str = json.dumps(op_data)
+def write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='data.json',shape_kv=None):
+    print("op shapes info:")
+    print(shape_kv)
+    if shape_kv == None:
+        op_data = {
+            'op_name': op_name,
+            'c_code': c_code,
+            'cuda_code': cuda_code,
+            'ir_code': ir_code
+        }
+    else:
+        op_data = {
+            'op_name': op_name,
+            'c_code': c_code,
+            'cuda_code': cuda_code,
+            'ir_code': ir_code,
+        }
+        for key, value in shape_kv.items():
+            op_data[key] = '_'.join(str(x) for x in value)
+    json_str = json.dumps(op_data)  
     with open(save_file, 'a') as f:
         f.write(json_str + '\n')
 
 success_count = 0
 failure_count = 0
+
+
+def get_shape(op,args):
+    shapes = op(*args)
+    shape_info = {}
+    for i, arg in enumerate(shapes[:-1]):
+        shape_info[arg.name] = shapes[i].shape
+
+    # 输出结果
+    return shape_info
+
+def handle_timeout(signum, frame):
+    raise KeyboardInterrupt('Timeout occurred.')  # 强制抛出 KeyboardInterrupt 异常
 
 def save_code(codegen_test,op_origin_name, operation, op_args_generator,max_attempts=10):
     attempts = 0
@@ -538,51 +566,55 @@ def save_code(codegen_test,op_origin_name, operation, op_args_generator,max_atte
 
         op_args = op_args_generator.get_param_values()
         print(*op_args)
+        print(op_args)
+        
         try:
+            #获取 shapes信息
+            shape_info = get_shape(operation,op_args)
+            
+            signal.signal(signal.SIGALRM, handle_timeout)  # 设置信号处理函数
+            signal.alarm(60*5)  # 设置定时器
             c_code, ir_code = codegen_test.c_codegen(topi_ops=operation, op_args=op_args)
+            signal.alarm(0)  # 取消定时器
+
+            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@_c_codegen_finished")
+
+            signal.signal(signal.SIGALRM, handle_timeout)  # 设置信号处理函数
+            signal.alarm(60*5)  # 设置定时器
             cuda_code = codegen_test.cuda_codegen(topi_ops=operation, op_args=op_args)
-            op_name = op_origin_name + str(op_args).replace(",", "_").replace(" ", "_")
-            write_json_to_file(op_name, c_code, cuda_code, ir_code)
+            signal.alarm(0)  # 取消定时器
+
+            print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@_cuda_codegen_finished")
+            op_name = op_origin_name
+            write_json_to_file(op_name, c_code, cuda_code, ir_code,save_file='nn_op.json',shape_kv=shape_info)
             success_count += 1
             attempts += 1
         except Exception as e:
             print(f"Code generation failed: {e}")
             failure_count += 1
             attempts += 1
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        # exit()
+
+list_conv_random = [conv2d_nchw,conv2d,conv1d,conv1d_ncw,conv1d_transpose_ncw,conv2d_gemm_weight_transform,conv3d_ncdhw,conv3d_winograd_weight_transform,depthwise_conv2d_nchw,depthwise_conv2d_nhwc,group_conv1d_ncw,group_conv1d_nwc]
+
+list_nchw_random = [add,adaptive_pool_avg,adaptive_pool_max,fast_softmax,batch_to_space_nd,global_pool_max,global_pool_avg,dilate,flatten,fifo_buffer,conv2d_winograd_weight_transform,concatenate,depth_to_space,leaky_relu,log_softmax,lrn,mirror_pad,pad,pool1d,pool2d,pool3d,relu,scale_shift_nchw,prelu,scale_shift_nchwc,softmax,softmax_common,space_to_depth,strided_slice,unpack_NCHWc_to_nchw,upsampling,rms_norm,bitserial_dense,batch_norm]
 
 
-
-
-
-
-
-
-
-
-list_conv_random = [conv2d_nchw,conv2d,conv1d,conv1d_ncw,conv1d_transpose_ncw,conv2d_gemm_weight_transform,conv3d_ncdhw,conv3d_ndhwc,conv3d_winograd_weight_transform,depthwise_conv2d_nchw,depthwise_conv2d_nhwc,group_conv1d_ncw,group_conv1d_nwc,group_conv2d_nchw,group_conv2d_nhwc]
-
-
-list_nchw_random = [adaptive_pool_avg,adaptive_pool_max,fast_softmax,add,batch_to_space_nd,global_pool_max,global_pool_avg,dilate,flatten,fifo_buffer,conv2d_winograd_weight_transform,concatenate,depth_to_space,binarize_pack,binary_dense,leaky_relu,log_softmax,lrn,mirror_pad,pad,pool1d,pool2d,pool3d,relu,scale_shift_nchw,prelu,scale_shift_nchwc,softmax,softmax_common,space_to_depth,strided_slice,unpack_NCHWc_to_nchw,upsampling,rms_norm,bitserial_dense,batch_norm]
-
-
-
-
-
-
-
+# codegen nn ops with nchw_random args
 for ops_function in list_nchw_random:
     op_args_generator = RandomNCHW()
     conv_codegen = Codegen()
     op_name = ops_function.__name__
     save_code(conv_codegen,op_name, ops_function,op_args_generator=op_args_generator)  #3. 调用函数
 
-
+# codegen nn ops with conv types args
 for ops_function in list_conv_random:
     op_args_generator = RandomConvOperator()
     conv_codegen = Codegen()
     op_name = ops_function.__name__
     save_code(conv_codegen,op_name, ops_function,op_args_generator=op_args_generator)  #3. 调用函数
-    
+
 print(f"成功个数：{success_count}")
 print(f"失败个数：{failure_count}")
 

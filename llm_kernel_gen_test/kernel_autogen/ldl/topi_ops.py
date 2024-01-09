@@ -231,13 +231,13 @@ for i in range(max_2d_len):
             try:
                 print("c_codegen")
                 signal.signal(signal.SIGALRM, handle_timeout)  # 设置信号处理函数
-                signal.alarm(60*10)  # 设置定时器
+                signal.alarm(60*5)  # 设置定时器
                 c_code, ir_code = c_codegen(shape=random_shape, verbose_key=False, search_times=4, nd_tensors_numbers=2)
                 signal.alarm(0)  # 取消定时器
 
                 print("cuda_codegen")
                 signal.signal(signal.SIGALRM, handle_timeout)  # 设置信号处理函数
-                signal.alarm(60*10)  # 设置定时器
+                signal.alarm(60*5)  # 设置定时器
                 cuda_code = cuda_codegen(shape=random_shape, verbose_key=False, search_times=4, nd_tensors_numbers=2)
                 signal.alarm(0)  # 取消定时器
 
@@ -331,58 +331,3 @@ print(f"Failed to process {failure_count} operators:")
 for i in failed_case:
     print(i)
 
-
-
-
-
-
-
-
-
-
-#wrong:
-# Cast,binary_search,collapse_sum,const_vector,decl_buffer
-# bitwise_and,bitwise_not,bitwise_or,bitwise_xor,expand_like
-# extern,fixed_point_multiply,full
-# hybrid_argwhere_1d,scanop
-
-
-#relay
-
-# dft,einsum
-
-
-#tvm.ir.Attrs
-# erf_legalize
-
-#2d
-#fixed_point_multiply_per_axis
-
-
-#1d
-# abs,acos,acosh,asin,asinh,atan,atanh,ceil,ceil_log2,cos,cosh,
-# erf,exp,fast_erf,fast_exp,fast_tanh,floor,identity,invert_permutation,
-# isfinite,isinf,isnan,log,log10,log2,logical_not,max,min,ndarray_size,
-# negative,round,rsqrt,sigmoid,sign,sin,sinh,sqrt,tan,tanh
-
-
-#2d
-# add,divide,equal,floor_divide,floor_mod,greater,greater_equal,less
-# less_equal,logical_and,logical_or,logical_xor,maximum,minimum,mod,multiply,
-# not_equal,power,right_shift,subtract,
-
-#3d 
-
-#1d special
-# all,any,arange,argmax,argmin,argsort,cumprod,cumsum,flip
-# adv_index,broadcast_to,cast,expand_dims,gather,gather_nd
-# clip(x,MIN,MAX),prod,reinterpret,repeat,reshape,sort,squeeze,stack,sum,
-# 
-# layout_transform
-
-#2d special
-
-#3d special
-
-#nd special
-# concatenate(a_tuple, axis=0),elemwise_sum
