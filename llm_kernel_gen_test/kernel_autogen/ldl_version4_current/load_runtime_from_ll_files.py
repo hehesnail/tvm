@@ -263,31 +263,3 @@ load_and_execute_from_ll(ll_directory)
 
 for operator, count in operators_count.items():
     print(f"{operator}: {count} 次")
-
-
-
-
-
-flip: 20 次
-floor: 21 次
-erf: 21 次
-exp: 19 次
-asinh: 20 次
-fast_erf: 19 次
-fast_exp: 21 次
-atanh: 20 次
-negative: 19 次
-acos: 20 次
-ceil: 16 次
-log: 19 次
-log2: 18 次
-log10: 19 次
-round: 18 次
-rsqrt: 20 次
-sigmoid: 17 次
-sign: 16 次
-sin: 18 次
-sinh: 19 次
-sqrt: 19 次
-tan: 18 次
-tanh: 19 次
