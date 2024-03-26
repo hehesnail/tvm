@@ -88,7 +88,7 @@ using runtime::TVMRetValue;
 class LLVMModuleNode final : public runtime::ModuleNode {
  public:
   ~LLVMModuleNode();
-
+  
   const char* type_key() const final { return "llvm"; }
 
   PackedFunc GetFunction(const String& name, const ObjectPtr<Object>& sptr_to_self) final;
@@ -115,6 +115,8 @@ class LLVMModuleNode final : public runtime::ModuleNode {
   void* GetGlobalAddr(const std::string& name, const LLVMTarget& llvm_target) const;
   void* GetFunctionAddr(const std::string& name, const LLVMTarget& llvm_target) const;
 
+  // LOAD from llvm flag
+  bool load_from_ll_flags{false};
   // The LLVM scope object.
   std::unique_ptr<LLVMInstance> llvm_instance_;
   // JIT lock
@@ -169,12 +171,19 @@ PackedFunc LLVMModuleNode::GetFunction(const String& name, const ObjectPtr<Objec
   TVMBackendPackedCFunc faddr;
   With<LLVMTarget> llvm_target(*llvm_instance_, LLVMTarget::GetTargetMetadata(*module_));
   if (name == runtime::symbol::tvm_module_main) {
-    const char* entry_name = reinterpret_cast<const char*>(
-        GetGlobalAddr(runtime::symbol::tvm_module_main, *llvm_target));
-    ICHECK(entry_name != nullptr) << "Symbol " << runtime::symbol::tvm_module_main
-                                  << " is not presented";
-    faddr = reinterpret_cast<TVMBackendPackedCFunc>(GetFunctionAddr(entry_name, *llvm_target));
-  } else {
+
+    if(load_from_ll_flags == false){
+      const char* entry_name = reinterpret_cast<const char*>(
+      GetGlobalAddr(runtime::symbol::tvm_module_main, *llvm_target));
+      ICHECK(entry_name != nullptr) << "Symbol " << runtime::symbol::tvm_module_main
+                                    << " is not presented";
+      faddr = reinterpret_cast<TVMBackendPackedCFunc>(GetFunctionAddr(entry_name, *llvm_target));
+    }
+    else {
+      faddr = reinterpret_cast<TVMBackendPackedCFunc>(GetFunctionAddr(name, *llvm_target));
+    }
+  }
+  else {
     faddr = reinterpret_cast<TVMBackendPackedCFunc>(GetFunctionAddr(name, *llvm_target));
   }
   if (faddr == nullptr) return PackedFunc();
@@ -219,13 +228,21 @@ bool LLVMAddPassesToEmitFile(llvm::TargetMachine* tm, llvm::legacy::PassManager*
 
 void LLVMModuleNode::SaveToFile(const String& file_name_str, const String& format) {
   // CHECK(imports_.empty()) << "SaveToFile does not handle imported modules";
+  // std::cout << "1|mywords:       LLVMModuleNode  use savetofile " << std::endl;
+  // std::cout << "2|file_name_str: " <<file_name_str<<std::endl;
+  // std::cout << "3|format:        " <<format<<std::endl;
+  
   std::string file_name = file_name_str;
   std::string fmt = runtime::GetFileFormat(file_name, format);
+  // std::cout << "4|format:        " <<fmt<<std::endl;
   std::error_code ecode;
   llvm::raw_fd_ostream dest(file_name, ecode, llvm_open_output_flag);
-  ICHECK_EQ(ecode.value(), 0) << "Cannot open file: " << file_name << " " << ecode.message();
+    ICHECK_EQ(ecode.value(), 0) << "Cannot open file: " << file_name << " " << ecode.message();
   bool is_obj_file = fmt == "o" || fmt == "obj";
   bool is_asm_file = fmt == "s" || fmt == "asm";
+
+  // module_->print(llvm::outs(), nullptr);
+
   if (is_obj_file || is_asm_file) {
     auto llvm_file_target = is_obj_file ? llvm_object_file_target : llvm_assembly_file_target;
 
@@ -372,6 +389,7 @@ void LLVMModuleNode::Init(std::unique_ptr<llvm::Module> module,
 }
 
 void LLVMModuleNode::LoadIR(const std::string& file_name) {
+  load_from_ll_flags = true;
   auto llvm_instance = std::make_unique<LLVMInstance>();
   std::unique_ptr<llvm::Module> module = llvm_instance->LoadIR(file_name);
   Init(std::move(module), std::move(llvm_instance));
@@ -438,6 +456,7 @@ bool LLVMModuleNode::IsCompatibleWithHost(const llvm::TargetMachine* tm) const {
 // Get global address from execution engine.
 void* LLVMModuleNode::GetGlobalAddr(const std::string& name, const LLVMTarget& llvm_target) const {
   // first verifies if GV exists.
+  // module_->print(llvm::outs(), nullptr);
   if (module_->getGlobalVariable(name) != nullptr) {
     return reinterpret_cast<void*>(ee_->getGlobalValueAddress(name));
   } else {
@@ -590,6 +609,13 @@ TVM_REGISTER_GLOBAL("target.llvm_version_major").set_body_typed([]() -> int {
 });
 
 TVM_REGISTER_GLOBAL("runtime.module.loadfile_ll")
+    .set_body_typed([](std::string filename, std::string fmt) -> runtime::Module {
+      auto n = make_object<LLVMModuleNode>();
+      n->LoadIR(filename);
+      return runtime::Module(n);
+    });
+  
+TVM_REGISTER_GLOBAL("runtime.LoadFromll")
     .set_body_typed([](std::string filename, std::string fmt) -> runtime::Module {
       auto n = make_object<LLVMModuleNode>();
       n->LoadIR(filename);

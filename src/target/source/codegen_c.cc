@@ -161,13 +161,25 @@ void CodeGenC::AddFunction(const GlobalVar& gvar, const PrimFunc& f) {
   InitFuncState(f);
 
   PrintFunctionSignature(function_name, f, stream);
+
+
+  // std::cout << "f->body : " << f->body << std::endl;  // hannibal-6: TensorIR的 AST树
+  // std::cout << "@#@@@@1" << std::endl;
+  // std::cout << stream.str() << std::endl;
   stream << " {\n";
   this->PreFunctionBody(f);
   int func_scope = this->BeginScope();
-  this->PrintStmt(f->body);
+  // std::cout << "@#@@@@2=1" << std::endl;
+  // return ;
+  this->PrintStmt(f->body); 
+  // std::cout << "@#@@@@2" << std::endl;
+  // return ;
   this->EndScope(func_scope);
   this->PrintIndent();
   this->stream << "}\n\n";
+
+  // std::cout << "@#@@@@3" << std::endl;
+  // std::cout << stream.str() << std::endl;
 }
 
 void CodeGenC::PrintFuncPrefix(std::ostream& os) {}
@@ -176,9 +188,9 @@ void CodeGenC::PrintExtraAttrs(const PrimFunc& f, std::ostream& os) {}
 
 std::string CodeGenC::Finish() {
   std::ostringstream code;
-  code << decl_stream.str();
-  code << fwd_decl_stream.str();
-  code << stream.str();
+  code << decl_stream.str();// hannibal-2.头文件定义
+  code << fwd_decl_stream.str();// hannibal-3.函数声明
+  code << stream.str();// hannibal-4.函数定义
   return code.str();
 }
 

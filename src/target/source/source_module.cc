@@ -153,6 +153,7 @@ class CSourceModuleNode : public runtime::ModuleNode {
   }
 
   void SaveToFile(const String& file_name, const String& format) final {
+    std::cout <<"SaveToFile  func use this one (func 1)" <<std::endl;
     std::string fmt = GetFileFormat(file_name, format);
     std::string meta_file = GetMetaFilePath(file_name);
     if (fmt == "c" || fmt == "cc" || fmt == "cpp" || fmt == "cu") {
@@ -228,6 +229,7 @@ class CSourceCrtMetadataModuleNode : public runtime::ModuleNode {
   }
 
   void SaveToFile(const String& file_name, const String& format) final {
+    std::cout <<"SaveToFile  func use this one (func 2)" <<std::endl;
     std::string fmt = GetFileFormat(file_name, format);
     std::string meta_file = GetMetaFilePath(file_name);
     if (fmt == "c" || fmt == "cc" || fmt == "cpp") {
@@ -1054,6 +1056,7 @@ class DeviceSourceModuleNode final : public runtime::ModuleNode {
   int GetPropertyMask() const final { return runtime::ModulePropertyMask::kBinarySerializable; }
 
   void SaveToFile(const String& file_name, const String& format) final {
+    std::cout <<"SaveToFile  in  C3" <<std::endl;
     std::string fmt = GetFileFormat(file_name, format);
     ICHECK_EQ(fmt, fmt_) << "Can only save to format=" << fmt_;
     std::string meta_file = GetMetaFilePath(file_name);

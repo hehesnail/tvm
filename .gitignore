@@ -7,6 +7,10 @@ __pycache__/
 *.so
 *.ll
 .npm
+
+*).c
+*).cu
+
 # Distribution / packaging
 .Python
 env/

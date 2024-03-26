@@ -99,6 +99,7 @@ def fixture_device_api_main_func():
             pass_config=test_runner.pass_config,
         )
         main_ir_module = compiled_models[0].executor_factory.lowered_ir_mods.items()[0][1]
+        print(main_ir_module)
         main_func = main_ir_module["__tvm_main__"]
         return main_func
 
@@ -240,9 +241,14 @@ def test_device_api_hooks_packed_api(device_api_main_func):
 
 def test_without_device_api_unpacked_api(non_device_api_main_func):
     """Test a graph without the Device API with the unpacked internal calls"""
-
+    
     main_func = non_device_api_main_func(interface_api="c", use_unpacked_api=True)
     body = main_func.body.value
+    
+    print("----!")
+    print(body)
+    print("----!")
+
     assert (
         repr(body)
         == 'T.tvm_check_return(0, -1, T.call_extern("int32", '

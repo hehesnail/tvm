@@ -7,7 +7,7 @@ from tvm.auto_scheduler import _ffi_api
 from tvm.topi.utils import get_const_tuple
 from tvm.topi.sparse.utils import random_bsr_matrix
 import json
-from nnop_random import RandomNCHW,RandomConvOperator,RandomMatmul, RandomNCHW32
+from nnop_random import RandomNCHW,RandomConvOperator,RandomMatmul, RandomNCHW
 
 from nn_codegen import Codegen
 import nn_codegen

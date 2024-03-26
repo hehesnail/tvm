@@ -358,15 +358,15 @@ void CodeGenLLVM::Verify() const {
 
 std::unique_ptr<llvm::Module> CodeGenLLVM::Finish() {
   this->AddStartupFunction();
-  for (size_t i = 0; i < link_modules_.size(); ++i) {
+    for (size_t i = 0; i < link_modules_.size(); ++i) {
     ICHECK(!llvm::Linker::linkModules(*module_, std::move(link_modules_[i])))
         << "Failed to link modules";
   }
   link_modules_.clear();
-  this->Verify();
+    this->Verify();
   this->Optimize();
   this->Verify();
-  return std::move(module_);
+    return std::move(module_);
 }
 
 void CodeGenLLVM::HandleImport(const std::string& code) {

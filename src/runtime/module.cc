@@ -94,7 +94,7 @@ Module Module::LoadFromFile(const String& file_name, const String& format) {
 }
 
 void ModuleNode::SaveToFile(const String& file_name, const String& format) {
-  LOG(FATAL) << "Module[" << type_key() << "] does not support SaveToFile";
+    LOG(FATAL) << "Module[" << type_key() << "] does not support SaveToFile";
 }
 
 void ModuleNode::SaveToBinary(dmlc::Stream* stream) {

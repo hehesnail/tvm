@@ -30,7 +30,7 @@ from .profiling import Report
 from .object_generic import convert_to_object, convert, const
 from .ndarray import device, cpu, cuda, gpu, opencl, cl, vulkan, metal, mtl
 from .ndarray import vpi, rocm, ext_dev
-from .module import load_module, enabled, system_lib, load_static_library
+from .module import load_module, enabled, system_lib, load_static_library, load_from_ll
 from .container import String, ShapeTuple
 from .params import (
     save_param_dict,

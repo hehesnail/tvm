@@ -80,7 +80,7 @@ class StaticLibraryNode final : public runtime::ModuleNode {
   }
 
   void SaveToFile(const String& file_name, const String& format) final {
-    VLOG(0) << "Saving static library of " << data_.size() << " bytes implementing " << FuncNames()
+        VLOG(0) << "Saving static library of " << data_.size() << " bytes implementing " << FuncNames()
             << " to '" << file_name << "'";
     SaveBinaryToFile(file_name, data_);
   }

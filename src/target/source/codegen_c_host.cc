@@ -66,7 +66,7 @@ void CodeGenCHost::Init(bool output_ssa, bool emit_asserts, bool emit_fwd_func_d
     decl_stream << "#include <arm_nn_types.h>\n";
     decl_stream << "#include <arm_nn_math_types.h>\n";
   }
-  CodeGenC::Init(output_ssa);
+  CodeGenC::Init(output_ssa); //0
 }
 
 void CodeGenCHost::InitGlobalContext() {
@@ -416,6 +416,7 @@ inline void CodeGenCHost::PrintTernaryCondExpr(const T* op, const char* compare,
 }
 
 runtime::Module BuildCHost(IRModule mod, Target target) {
+  // 1.hannibal read code begin
   using tvm::runtime::Registry;
   bool output_ssa = false;
   bool emit_asserts = false;
@@ -488,7 +489,7 @@ runtime::Module BuildCHost(IRModule mod, Target target) {
         << "c target only supports generating C runtime SystemLibs";
   }
 
-  std::string code = cg.Finish();
+  std::string code = cg.Finish();// hannibal-4 代码已经生成完毕
   return CSourceModuleCreate(code, "c", cg.GetFunctionNames());
 }
 

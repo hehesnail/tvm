@@ -303,6 +303,7 @@ class Module(object):
         --------
         runtime.Module.export_library : export the module to shared library.
         """
+        print("save files here")
         _ffi_api.ModuleSaveToFile(self, file_name, fmt)
 
     def time_evaluator(
@@ -691,6 +692,9 @@ def load_module(path, fmt=""):
         path += ".so"
     # Redirect to the load API
     return _ffi_api.ModuleLoadFromFile(path, fmt)
+
+def load_from_ll(path, fmt="ll"):
+    return _ffi_api.LoadFromll(path, fmt)
 
 
 def load_static_library(path, func_names):

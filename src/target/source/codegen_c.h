@@ -101,7 +101,11 @@ class CodeGenC : public ExprFunctor<void(const PrimExpr&, std::ostream&)>,
    * \brief Print the Stmt n to CodeGenC->stream
    * \param n The statement to be printed.
    */
-  void PrintStmt(const Stmt& n) { VisitStmt(n); }
+  void PrintStmt(const Stmt& n) {  // hannibal-9 print tensorir
+    // std::cout <<"--------------------------" << std::endl;
+    // std::cout << n << std::endl;
+    // std::cout <<"--------------------------" << std::endl;
+    VisitStmt(n); }
   /*!
    * \brief Print the expression n(or its ssa id if in ssa mode) into os
    * \param n The expression to be printed.
