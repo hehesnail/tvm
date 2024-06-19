@@ -1006,6 +1006,10 @@ void CodeGenC::VisitStmt_(const ForNode* op) {
   PrintIndent();
   std::string vid = AllocVarID(op->loop_var.get());
   ICHECK(is_zero(op->min));
+  if (op->kind == ForKind::kParallel) {
+    stream << "#pragma omp parallel for\n";
+    PrintIndent();
+  }
   stream << "for (";
   PrintType(op->loop_var.dtype(), stream);
   stream << ' ' << vid << " = 0; " << vid << " < " << extent << "; ++" << vid << ") {\n";
