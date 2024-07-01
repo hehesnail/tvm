@@ -270,6 +270,52 @@ inline PackedFunc PackFuncPackedArg_(F f, const std::vector<ArgConvertCode>& cod
   };
   return PackedFunc(ret);
 }
+
+// pack func void args to void** args, directly use handle type arg, @hxf
+template <int N, typename F>
+inline PackedFunc PackFuncVoidArgs_(F f, const std::vector<ArgConvertCode>& codes) {
+  int num_args = static_cast<int>(codes.size());
+  auto ret = [f, codes, num_args](TVMArgs args, TVMRetValue* ret) {
+    TempArray<void*, N> addr_(num_args);
+    TempArray<ArgUnion32, N> holder_(num_args);
+    void** addr = addr_.data();
+    ArgUnion32* holder = holder_.data();
+    for (int i = 0; i < num_args; ++i) {
+      switch (codes[i]) {
+        case INT64_TO_INT64: {
+          addr[i] = (void*)&(args.values[i].v_int64);
+          break;
+        }
+        case FLOAT64_TO_FLOAT64: {
+          addr[i] = (void*)&(args.values[i].v_float64);  
+          break;
+        }
+        case HANDLE_TO_HANDLE: {
+          // note here: for handle arg, pass-in original v_handle addr
+          addr[i] = (void*)(args.values[i].v_handle); 
+          break;
+        }
+        case INT64_TO_INT32: {
+          holder[i].v_int32 = static_cast<int32_t>(args.values[i].v_int64);
+          addr[i] = &(holder[i]);
+          break;
+        }
+        case INT64_TO_UINT32: {
+          holder[i].v_uint32 = static_cast<uint32_t>(args.values[i].v_int64);
+          addr[i] = &(holder[i]);
+          break;
+        }
+        case FLOAT64_TO_FLOAT32: {
+          holder[i].v_float32 = static_cast<float>(args.values[i].v_float64);
+          addr[i] = &(holder[i]);
+          break;
+        }
+      }
+    }
+    f(args, ret, addr);
+  };
+  return PackedFunc(ret);
+}
 }  // namespace detail
 
 template <typename F>
@@ -334,6 +380,25 @@ inline PackedFunc PackFuncPackedArg(F f, const std::vector<DLDataType>& arg_type
     return detail::PackFuncPackedArg_<0>(f, codes);
   }
 }
+
+// used to pack cext module get function tvm args @hxf 
+template <typename F>
+inline PackedFunc PackFuncVoidArgs(F f, const std::vector<DLDataType>& arg_types) {
+  std::vector<detail::ArgConvertCode> codes(arg_types.size());
+  for (size_t i = 0; i < arg_types.size(); ++i) {
+    codes[i] = detail::GetArgConvertCode(arg_types[i]);
+  }
+  size_t num_void_args = arg_types.size();
+  // specialization
+  if (num_void_args <= 4) {
+    return detail::PackFuncVoidArgs_<4>(f, codes);
+  } else if (num_void_args <= 8) {
+    return detail::PackFuncVoidArgs_<8>(f, codes);
+  } else {
+    return detail::PackFuncVoidArgs_<0>(f, codes);
+  }
+}
+
 }  // namespace runtime
 }  // namespace tvm
 #endif  // TVM_RUNTIME_PACK_ARGS_H_

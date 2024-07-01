@@ -143,6 +143,33 @@ void CodeGenC::DeclareFunction(const GlobalVar& gvar, const PrimFunc& func) {
   fwd_decl_stream << ";\n";
 }
 
+// helper func not to print func declartion. @hxf
+void CodeGenC::NoDeclareFunction(const GlobalVar& gvar, const PrimFunc& func) {
+  if (internal_functions_.count(gvar)) {
+    return;
+  }
+
+  auto function_name = [&]() -> String {
+    if (auto global_symbol = func->GetAttr<String>(tvm::attr::kGlobalSymbol)) {
+      auto name = global_symbol.value();
+      ICHECK(!func_name_supply_->ContainsName(name))
+          << "Function " << gvar << " must use global symbol " << name
+          << ", but this name has already been used.";
+      func_name_supply_->ReserveName(name);
+      return name;
+    } else {
+      func_name_supply_->ReserveName(gvar->name_hint);
+      return gvar->name_hint;
+    }
+  }();
+
+  internal_functions_.insert({gvar, function_name});
+
+  InitFuncState(func);
+  // PrintFunctionSignature(function_name, func, fwd_decl_stream);
+  // fwd_decl_stream << ";\n";
+}
+
 String CodeGenC::GetFunctionName(const GlobalVar& gvar) {
   auto it = internal_functions_.find(gvar);
   ICHECK(it != internal_functions_.end())
@@ -1006,7 +1033,8 @@ void CodeGenC::VisitStmt_(const ForNode* op) {
   PrintIndent();
   std::string vid = AllocVarID(op->loop_var.get());
   ICHECK(is_zero(op->min));
-  if (op->kind == ForKind::kParallel) {
+  // parse for loop parallel attribute, omp lib link needed @hxf
+  if (op->kind == ForKind::kParallel && use_omp_) {
     stream << "#pragma omp parallel for\n";
     PrintIndent();
   }

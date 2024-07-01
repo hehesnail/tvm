@@ -66,6 +66,10 @@ class CodeGenC : public ExprFunctor<void(const PrimExpr&, std::ostream&)>,
    */
   void Init(bool output_ssa);
 
+  void EnableForParallel() {
+    use_omp_ = true;
+  }
+
   /*!
    * \brief Add the function declaration to the generated module,
    * without defining it.
@@ -75,6 +79,8 @@ class CodeGenC : public ExprFunctor<void(const PrimExpr&, std::ostream&)>,
    * \param whether to append return 0 in the end.
    */
   virtual void DeclareFunction(const GlobalVar& gvar, const PrimFunc& func);
+
+  virtual void NoDeclareFunction(const GlobalVar& gvar, const PrimFunc& func);
 
   /*!
    * \brief Add the function to the generated module, including its
@@ -319,6 +325,8 @@ class CodeGenC : public ExprFunctor<void(const PrimExpr&, std::ostream&)>,
   Integer constants_byte_alignment_ = 16;
   /*! \brief whether to print in SSA form */
   bool print_ssa_form_{false};
+
+  bool use_omp_{false};
 
  private:
   /*! \brief set of volatile buf access */

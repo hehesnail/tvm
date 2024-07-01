@@ -480,6 +480,7 @@ runtime::Module TIRToRuntime(const Map<Target, IRModule>& inputs_arg,
   IRModule mhost_all = IRModule(Map<GlobalVar, BaseFunc>(), {}, {}, {}, first_module->attrs);
 
   ICHECK(mhost_all.defined()) << "The host module must be defined";
+  // std::cout << "@@@@@@ --> tir_to_runtime: " << inputs.size() << "\n";
 
   for (const auto& it : inputs) {
     if (it.second.defined()) {
@@ -488,6 +489,10 @@ runtime::Module TIRToRuntime(const Map<Target, IRModule>& inputs_arg,
       auto pair = SplitMixedModule(ir_module, target, target_host);
       auto& host_mod = pair.first;
       auto& device_mod = pair.second;
+      // std::cout << "host_mod: " << host_mod << "\n";
+      // std::cout << "device_mod: " << device_mod << "\n";
+      // std::cout << "target: " << target << "\n";
+      // std::cout << "target_host: " << target_host << "\n";
 
       ICHECK(host_mod.defined()) << "The split host module must be defined";
 
@@ -499,19 +504,26 @@ runtime::Module TIRToRuntime(const Map<Target, IRModule>& inputs_arg,
       // back into the host Module.
       bool overrides_host_target =
           target->GetTargetDeviceType() == target_host->GetTargetDeviceType();
+
+      // std::cout << "@@@@ override host target---> " << target->GetTargetDeviceType() << ", " << target_host->GetTargetDeviceType() << "\n";
       bool non_host_target_kind = target->kind != target_host->kind;
-      if (overrides_host_target && non_host_target_kind) {
+      // std::cout << "non_host_target_kind: " << non_host_target_kind << ", " << (target->kind->name == "c") << "\n";
+      if (target->kind->name != "c" && overrides_host_target && non_host_target_kind) {
         device_modules.push_back(codegen::Build(host_mod, it.first));
       } else {
+        // std::cout << "mhost all update host mod: --> \n";
         mhost_all->Update(host_mod);
       }
 
       if (device_mod->functions.size() != 0) {
+        // std::cout << "device mode build functions size: --> " << device_mod->functions.size() << "\n";
+        // std::cout << "device module build target --> target.build." << it.first->kind->name << "\n";
         device_modules.push_back(codegen::Build(device_mod, it.first));
       }
     }
   }
 
+  // std::cout << "host module build target --> target.build." << target_host->kind->name << "\n";
   runtime::Module mhost = codegen::Build(mhost_all, target_host);
   for (const auto& it : device_modules) {
     if (it.operator->()) {

@@ -102,6 +102,18 @@ class CUDAModuleNode : public runtime::ModuleNode {
     }
   }
 
+  String GetPureSource(const String& format) final {
+    if (clean_code_.length() != 0) {
+      return clean_code_;
+    } else {
+      return "";
+    }
+  }
+
+  void SetPureSource(const String& clean_code) final {
+    clean_code_ = clean_code;
+  }
+
   // get a CUfunction from primary context in device_id
   CUfunction GetFunc(int device_id, const std::string& func_name) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -151,6 +163,8 @@ class CUDAModuleNode : public runtime::ModuleNode {
   std::array<CUmodule, kMaxNumGPUs> module_;
   // internal mutex when updating the module
   std::mutex mutex_;
+  // clean code
+  std::string clean_code_;
 };
 
 // a wrapped function class to get packed func.

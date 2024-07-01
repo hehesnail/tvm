@@ -307,6 +307,7 @@ tvm_file_glob(GLOB CODEGEN_SRCS
     )
 
 list(APPEND COMPILER_SRCS ${CODEGEN_SRCS})
+list(APPEND COMPILER_SRCS src/target/opt/build_cext_on.cc)
 
 tvm_file_glob(GLOB_RECURSE RELAY_OP_SRCS
     src/relay/op/*.cc
@@ -366,6 +367,10 @@ endif()
 if (INDEX_DEFAULT_I64)
   add_definitions(-DTVM_INDEX_DEFAULT_I64=1)
 endif()
+
+message(STATUS "Build with cext support...")
+tvm_file_glob(GLOB RUNTIME_CEXT_SRCS src/runtime/cext/*.cc)
+list(APPEND RUNTIME_SRCS ${RUNTIME_CEXT_SRCS})
 
 if(USE_RPC)
   message(STATUS "Build with RPC support...")

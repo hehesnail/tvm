@@ -49,12 +49,12 @@ void CodeGenCHost::Init(bool output_ssa, bool emit_asserts, bool emit_fwd_func_d
   emit_asserts_ = emit_asserts;
   emit_fwd_func_decl_ = emit_fwd_func_decl;
   declared_globals_.clear();
-  // decl_stream << "// tvm target: " << target_str << "\n";
+  decl_stream << "// tvm target: " << target_str << "\n";
   decl_stream << "#include <stdlib.h>\n";
   decl_stream << "#include <stdio.h>\n";
-  // decl_stream << "#define TVM_EXPORTS\n";
-  // decl_stream << "#include \"tvm/runtime/c_runtime_api.h\"\n";
-  // decl_stream << "#include \"tvm/runtime/c_backend_api.h\"\n";
+  decl_stream << "#define TVM_EXPORTS\n";
+  decl_stream << "#include \"tvm/runtime/c_runtime_api.h\"\n";
+  decl_stream << "#include \"tvm/runtime/c_backend_api.h\"\n";
   decl_stream << "#include <math.h>\n";
   decl_stream << "#include <stdbool.h>\n";
   if (devices.find("ethos-u") != devices.end()) {

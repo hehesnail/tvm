@@ -105,6 +105,18 @@ String ModuleNode::GetSource(const String& format) {
   LOG(FATAL) << "Module[" << type_key() << "] does not support GetSource";
 }
 
+void ModuleNode::SetSource(const String& code) {
+  LOG(FATAL) << "Module[" << type_key() << "] does not support GetSource";
+}
+
+String ModuleNode::GetPureSource(const String& format) {
+  LOG(FATAL) << "Module[" << type_key() << "] does not support GetPureSource";
+}
+
+void ModuleNode::SetPureSource(const String& clean_code) {
+  LOG(FATAL) << "Module[" << type_key() << "] does not support SetPureSource";
+}
+
 const PackedFunc* ModuleNode::GetFuncFromEnv(const String& name) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = import_cache_.find(name);
@@ -175,6 +187,14 @@ TVM_REGISTER_GLOBAL("runtime.RuntimeEnabled").set_body_typed(RuntimeEnabled);
 
 TVM_REGISTER_GLOBAL("runtime.ModuleGetSource").set_body_typed([](Module mod, std::string fmt) {
   return mod->GetSource(fmt);
+});
+
+TVM_REGISTER_GLOBAL("runtime.ModuleSetSource").set_body_typed([](Module mod, std::string code) {
+  return mod->SetSource(code);
+});
+
+TVM_REGISTER_GLOBAL("runtime.ModuleGetPureSource").set_body_typed([](Module mod, std::string fmt) {
+  return mod->GetPureSource(fmt);
 });
 
 TVM_REGISTER_GLOBAL("runtime.ModuleImportsSize").set_body_typed([](Module mod) {

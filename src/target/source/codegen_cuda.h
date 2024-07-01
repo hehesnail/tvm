@@ -45,6 +45,7 @@ class CodeGenCUDA final : public CodeGenC {
     return (enable_fp16_ || enable_bf16_ || enable_int8_ || enable_fp8_ || need_math_constants_h_ ||
             need_mma_h_);
   }
+  void set_clean_code_flag() { clean_code_flag_ = true; }
   // override behavior
   void PrintFuncPrefix(std::ostream& os) final;
   void PrintExtraAttrs(const PrimFunc& f, std::ostream& os) final;  // NOLINT(*)
@@ -116,6 +117,8 @@ class CodeGenCUDA final : public CodeGenC {
   // The alignment of the barrier array in shared memory
   // Set to 16 to maintain minimum alignment requirements for async bulk copy
   const int barrier_alignment_bytes_ = 16;
+  
+  bool clean_code_flag_ = false;
 
   std::unordered_map<const VarNode*, std::string> fragment_shapes;
   std::unordered_map<const VarNode*, std::string> fragment_layouts;

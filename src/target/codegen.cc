@@ -69,6 +69,10 @@ runtime::Module Build(IRModule mod, Target target) {
 
   // the build function.
   std::string build_f_name = "target.build." + target->kind->name;
+  // change c target to call build cext module, @hxf
+  if (target->kind->name == "c") {
+    build_f_name = "target.build.cext";
+  }
   const PackedFunc* bf = runtime::Registry::Get(build_f_name);
   ICHECK(bf != nullptr) << build_f_name << " is not enabled";
   return (*bf)(mod, target);

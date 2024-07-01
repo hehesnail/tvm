@@ -91,6 +91,9 @@ void CodeGenCUDA::PrintExtraAttrs(const PrimFunc& f, std::ostream& os) {
 }
 
 std::string CodeGenCUDA::Finish() {
+  if (clean_code_flag_) {
+    return CodeGenC::Finish();
+  }
   if (enable_fp16_) {
     decl_stream << "#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 530)\n";
     decl_stream << "#include <cuda_fp16.h>\n";

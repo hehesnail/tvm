@@ -228,6 +228,35 @@ class Module(object):
         """
         return _ffi_api.ModuleGetSource(self, fmt)
 
+    def set_source(self, code=""):
+        """Set source code from module, if available.
+
+        Parameters
+        ----------
+        code : str, optional
+            The pass-in code.
+
+        Returns
+        -------
+        None
+        """
+        return _ffi_api.ModuleSetSource(self, code)
+
+    def get_pure_source(self, fmt=""):
+        """Get clean source code from module, if avaiable.
+
+        Parameters
+        ----------
+        fmt : str, optional
+            The specified format.
+
+        Returns
+        -------
+        source : str
+            The result source code.
+        """
+        return _ffi_api.ModuleGetPureSource(self, fmt)
+
     @property
     def imported_modules(self):
         """Get imported modules

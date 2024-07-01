@@ -135,14 +135,18 @@ class DeivceAttrFinder : public StmtVisitor {
   bool device_attr_existed_ = false;
 };
 
+// force to mark target attr func, @hxf
 PrimFunc MarkTargetAttrStmt(PrimFunc func) {
   auto target = func->attrs->dict[tvm::attr::kTarget];
-  auto device_target = target.as<Target>().value().WithoutHost();
-
-  Stmt new_body = AttrStmt(device_target, tvm::attr::kTarget, 0, func->body);
-  func.CopyOnWrite()->body = new_body;
-
-  return func;
+  // only mark device target attr for c target
+  if (target.as<Target>().get()->kind->name == "c") {
+    auto device_target = target.as<Target>().value().WithoutHost();
+    Stmt new_body = AttrStmt(device_target, tvm::attr::kTarget, 0, func->body);
+    func.CopyOnWrite()->body = new_body;
+    return func;
+  } else {
+    return func;
+  }  
 }
 
 PrimFunc SplitHostDevice(PrimFunc func, IRModule* device_mod,
@@ -177,8 +181,7 @@ Pass SplitHostDevice() {
         };
 
         // std::cout << "@@@@@@@@@@ prev func: " << func << "\n";
-
-        // still split host/device when target is cpu, @hxf
+        // still split host/device when target is c, @hxf
         DeivceAttrFinder attrFinder;
         attrFinder(func->body);
         if (!attrFinder.device_attr_existed_) {
@@ -197,6 +200,7 @@ Pass SplitHostDevice() {
 
     mod->Update(updates);
     mod->Update(device_mod);
+    // std::cout << mod << "\n\n";
     return ConvertSSA()(mod);
   };
 

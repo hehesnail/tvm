@@ -35,8 +35,11 @@
 namespace tvm {
 namespace auto_scheduler {
 
-static std::vector<int> auto_unroll_configs_cpu = {0, 16, 64, 512};
-static std::vector<int> auto_unroll_configs_gpu = {0, 16, 64, 512, 1024};
+// static std::vector<int> auto_unroll_configs_cpu = {0, 16, 64, 512};
+// static std::vector<int> auto_unroll_configs_gpu = {0, 16, 64, 512, 1024};
+// config auto_unroll_configs to 0s to generate less code tokens
+static std::vector<int> auto_unroll_configs_cpu = {0};
+static std::vector<int> auto_unroll_configs_gpu = {0};
 
 /********** Sketch Generation Rule **********/
 /********** RuleSkipStage **********/

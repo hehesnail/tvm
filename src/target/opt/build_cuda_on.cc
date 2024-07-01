@@ -148,7 +148,18 @@ runtime::Module BuildCUDA(IRModule mod, Target target) {
     cg.AddFunction(gvar, prim_func);
   }
 
+  CodeGenCUDA cg_helper;
+  cg_helper.Init(output_ssa);
+  cg_helper.set_clean_code_flag();
+  for (auto [gvar, prim_func] : functions) {
+    cg_helper.NoDeclareFunction(gvar, prim_func);
+  }
+  for (auto [gvar, prim_func] : functions) {
+    cg_helper.AddFunction(gvar, prim_func);
+  }
+
   std::string code = cg.Finish();
+  std::string clean_code = cg_helper.Finish();
 
   if (const auto* f = Registry::Get("tvm_callback_cuda_postproc")) {
     code = (*f)(code, target).operator std::string();
@@ -167,7 +178,9 @@ runtime::Module BuildCUDA(IRModule mod, Target target) {
   }
   const auto* f_exit = Registry::Get("target.TargetExitScope");
   (*f_exit)(target);
-  return CUDAModuleCreate(ptx, fmt, ExtractFuncInfo(mod), code);
+  auto cuda_module = CUDAModuleCreate(ptx, fmt, ExtractFuncInfo(mod), code);
+  cuda_module->SetPureSource(clean_code);
+  return cuda_module;
 }
 
 TVM_REGISTER_GLOBAL("target.build.cuda").set_body_typed(BuildCUDA);
