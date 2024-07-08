@@ -154,6 +154,7 @@ String CodeGenC::GetFunctionName(const GlobalVar& gvar) {
 void CodeGenC::AddFunction(const GlobalVar& gvar, const PrimFunc& f) {
   // If the function has already been forward-declared, this is a
   // no-op.
+  std::cout << f << std::endl;
   DeclareFunction(gvar, f);
   auto function_name = GetFunctionName(gvar);
 
