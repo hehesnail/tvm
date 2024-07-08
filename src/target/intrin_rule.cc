@@ -118,6 +118,9 @@ TVM_REGISTER_OP("tir.nearbyint")
 TVM_REGISTER_OP("tir.pow").set_attr<FLowerIntrinsic>("default.FLowerIntrinsic",
                                                      DispatchPureExtern<FloatSuffix>);
 
+TVM_REGISTER_OP("tir.fabs").set_attr<FLowerIntrinsic>("default.FLowerIntrinsic",
+                                                     DispatchPureExtern<FloatSuffix>);
+
 PrimExpr DispatchFastErf(const PrimExpr& e) {
   LOG(WARNING) << "fast_erf will be used instead of erf";
   const CallNode* call = e.as<CallNode>();
