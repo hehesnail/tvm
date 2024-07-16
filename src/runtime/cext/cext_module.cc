@@ -154,13 +154,25 @@ PackedFunc CEXTModuleNode::GetFunction(const String& name, const ObjectPtr<Objec
     ICHECK_EQ(sptr_to_self.get(), this);
     ICHECK_NE(name, symbol::tvm_module_main) << "Device function do not have main";
 
+    // std::cout << "@@@@@@@@@@@@@@@ enter cext module to get function: " << name << "\n";
     auto it = fmap_.find(name);
     if (it == fmap_.end())  return PackedFunc();
     const FunctionInfo& info = it->second;
     CEXTWrappedFunc f;
     f.Init(this, sptr_to_self, name, info.arg_types.size(), info.arg_types);
-    // std::cout << "~~~~~ enter cext module to get function: " << name << "\n";
     return PackFuncVoidArgs(f, info.arg_types);
+}
+
+// Load module from file
+Module CEXTModuleLoadFile(const std::string& file_name, const String& format) {
+    std::string data;
+    std::unordered_map<std::string, FunctionInfo> fmap;
+    std::string fmt = GetFileFormat(file_name, format);
+    std::string meta_file = GetMetaFilePath(file_name);
+    LoadBinaryFromFile(file_name, &data);
+    LoadMetaDataFromFile(meta_file, &fmap);
+
+    return CEXTModuleCreate(data, std::string(), format, fmap);
 }
 
 Module CEXTModuleCreate(std::string code, std::string clean_code, std::string fmt,
@@ -168,6 +180,8 @@ Module CEXTModuleCreate(std::string code, std::string clean_code, std::string fm
     auto n = make_object<CEXTModuleNode>(code, clean_code, fmt, fmap);
     return Module(n);
 }
+
+TVM_REGISTER_GLOBAL("runtime.module.loadfile_c").set_body_typed(CEXTModuleLoadFile);
 
 }   // namespace runtime    
 }   // namespace tvm

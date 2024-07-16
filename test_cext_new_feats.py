@@ -1,9 +1,11 @@
+import os
+import torch
 import tvm
+import numpy as np
 import tvm.testing as testing
 from tvm import te
 from tvm import topi
-import numpy as np
-import torch
+from tvm.runtime import load_module
 
 def test_omp():
     """
@@ -108,7 +110,6 @@ def test_load_c_source():
     testing.assert_allclose(c.numpy(), torch_c.numpy())
 
 
-
 def test_cuda():
     target = tvm.target.Target(target="cuda", host="llvm")
     dev = tvm.device(target.kind.name, 0)
@@ -135,7 +136,78 @@ def test_cuda():
     cuda_func(a, b)
     print(b)
 
+
+def test_cext_module_save():
+    """
+    test case for cext module save & load & test
+    """
+    target = tvm.target.Target(target="c", host="llvm")
+    M, K, N = 4, 4, 4
+    A = te.placeholder((M, K), name="A")
+    B = te.placeholder((K, N), name="B")
+    C = topi.nn.matmul(A, B)
+    s = te.create_schedule(C.op)
+    func = tvm.build(s, [A, B, C], target=target)
+
+    host_module = func
+    device_module = func.imported_modules[0]
+
+    save_path = "temp_saved_modules"
+    os.mkdir(save_path)
+
+    host_module.save(os.path.join(save_path, "host_module"), "ll")
+    device_module.save(os.path.join(save_path, "device_module"), "c")
+
+def test_cext_module_load():
+    target = tvm.target.Target(target="c", host="llvm")
+    save_path = "temp_saved_modules"
+    if not os.path.exists(save_path):
+        raise Exception(f"{save_path} not found")
+
+    host_module = load_module(os.path.join(save_path, "host_module"), "ll")
+    device_module = load_module(os.path.join(save_path, "device_module"), "c")
+    host_module.import_module(device_module)
+
+    print(host_module.imported_modules[0].get_source())
+    # note: function name matters, if not given, func name needs to be default_function_kernel
+    c_code = """
+    void default_function_kernel(float* A, float* B, float* C) {
+    for (int32_t i0 = 0; i0 < 4; ++i0) {
+        for (int32_t i1 = 0; i1 < 4; ++i1) {
+        C[((i0 * 4) + i1)] = 0.000000e+00f;
+        for (int32_t k = 0; k < 4; ++k) {
+            C[((i0 * 4) + i1)] = (C[((i0 * 4) + i1)] + (A[((i0 * 4) + k)] * B[((k * 4) + i1)]));
+        }
+        }
+    }
+    }
+    """
+    host_module.imported_modules[0].set_source(c_code)
+    print(host_module.imported_modules[0].get_source())
+
+    dev = tvm.device(target.kind.name, 0)
+    M, K, N = 4, 4, 4
+    # dtype非常重要，需要和生成时的数据类型匹配
+    np_a = np.ones((M, K)).astype("float32") * 3  
+    np_b = np.ones((K, N)).astype("float32") * 2
+    np_c = np.zeros((M, N)).astype("float32")
+    a = tvm.nd.array(np_a, dev)
+    b = tvm.nd.array(np_b, dev)
+    c = tvm.nd.array(np_c, dev)
+
+    host_module(a, b, c)
+    print(c, c.numpy().shape)
+
+    torch_a = torch.from_numpy(np_a)
+    torch_b = torch.from_numpy(np_b)
+    torch_c = torch.matmul(torch_a, torch_b)
+    print(torch_c, torch_c.numpy().shape)
+
+    testing.assert_allclose(c.numpy(), torch_c.numpy())
+
 if __name__ == "__main__":
-    test_omp()
-    test_load_c_source()
-    test_cuda()
+    # test_omp()
+    # test_load_c_source()
+    # test_cuda()
+    # test_cext_module_save()
+    test_cext_module_load()
