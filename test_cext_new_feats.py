@@ -153,10 +153,16 @@ def test_cext_module_save():
     device_module = func.imported_modules[0]
 
     save_path = "temp_saved_modules"
-    os.mkdir(save_path)
+    host_path = "host_module"
+    device_path = "device_module"
 
-    host_module.save(os.path.join(save_path, "host_module"), "ll")
-    device_module.save(os.path.join(save_path, "device_module"), "c")
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+        os.mkdir(os.path.join(save_path, host_path))
+        os.mkdir(os.path.join(save_path, device_path))
+
+    host_module.save(os.path.join(save_path, host_path, "topology_expansion_[['add', 'cos', 'asin', 'ceil']]_[[12, 1, 18], [16, 3, 1], [12, 1, 18]]"), "ll")
+    device_module.save(os.path.join(save_path, device_path, "topology_expansion_[['add', 'cos', 'asin', 'ceil']]_[[12, 1, 18], [16, 3, 1], [12, 1, 18]]"), "c")
 
 def test_cext_module_load():
     target = tvm.target.Target(target="c", host="llvm")
@@ -209,5 +215,5 @@ if __name__ == "__main__":
     # test_omp()
     # test_load_c_source()
     # test_cuda()
-    # test_cext_module_save()
-    test_cext_module_load()
+    test_cext_module_save()
+    # test_cext_module_load()

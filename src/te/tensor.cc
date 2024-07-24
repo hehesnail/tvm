@@ -185,5 +185,6 @@ TVM_REGISTER_GLOBAL("te.OpNumOutputs").set_body_method<Operation>(&OperationNode
 
 TVM_REGISTER_GLOBAL("te.OpInputTensors").set_body_method<Operation>(&OperationNode::InputTensors);
 
+TVM_REGISTER_GLOBAL("te.OpSetName").set_body_method(&Operation::set_name);
 }  // namespace te
 }  // namespace tvm

@@ -60,6 +60,10 @@ class Operation : public ObjectRef {
    * \return The i-th output.
    */
   TVM_DLL Tensor output(size_t i) const;
+
+  // set name method
+  inline void set_name(std::string pass_in_name);
+
   /*! \brief specify container node */
   using ContainerType = OperationNode;
 };

@@ -126,6 +126,9 @@ class Tensor(DataProducer, _expr.ExprOp):
             return op.name
         return f"{op.name}.v{self.value_index}"
 
+    def set_name(self, pass_in_name):
+        op = self.op
+        op.set_name(pass_in_name)
 
 class Operation(Object):
     """Represent an operation that generates a tensor"""
@@ -155,6 +158,8 @@ class Operation(Object):
         """List of input tensors to this op."""
         return _ffi_api.OpInputTensors(self)
 
+    def set_name(self, pass_in_name):
+        _ffi_api.OpSetName(self, pass_in_name)
 
 @tvm._ffi.register_object
 class PlaceholderOp(Operation):

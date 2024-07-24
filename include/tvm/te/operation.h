@@ -640,6 +640,11 @@ inline Tensor compute(Array<PrimExpr> shape, std::function<PrimExpr(Var, Var, Va
 inline const OperationNode* Operation::operator->() const {
   return static_cast<const OperationNode*>(get());
 }
+
+inline void Operation::set_name(std::string pass_in_name) {
+  auto node_ptr = static_cast<OperationNode*>(get_mutable());
+  node_ptr->name = pass_in_name;
+}
 }  // namespace te
 }  // namespace tvm
 #endif  // TVM_TE_OPERATION_H_
