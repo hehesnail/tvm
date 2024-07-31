@@ -257,6 +257,9 @@ class Module(object):
         """
         return _ffi_api.ModuleGetPureSource(self, fmt)
 
+    def compile_source(self):
+        return _ffi_api.ModuleCompileSource(self)
+
     @property
     def imported_modules(self):
         """Get imported modules
@@ -696,6 +699,7 @@ def load_module(path, fmt=""):
     This function will automatically call
     cc.create_shared if the path is in format .o or .tar
     """
+    print(path)
     if os.path.isfile(path):
         path = os.path.realpath(path)
     else:

@@ -76,6 +76,8 @@ std::string CompileStringCode(const std::string& code, const std::string& name, 
 
     int ret = system(command.c_str());
     if (ret != 0) {
+        std::cout << "Compilation failed: " << command << "\n";
+        std::abort(); 
         throw std::runtime_error("Compilation failed. " + command);
     }
 
@@ -153,6 +155,7 @@ CEXTResult cextLaunchKernel(void** void_args, const std::string& kernel_name, co
     }
     if (bridge_call_func == nullptr) {
         std::cerr << "Can't find function: bridge_call " << "\n";
+        std::abort();
         return CEXTResult::CEXT_LOAD_FUNC_SYMBOL_FAIL;
     }
     // std::cout << "################ bridge call: " << bridge_call_func << "\n";

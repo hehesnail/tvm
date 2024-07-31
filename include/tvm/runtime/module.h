@@ -190,6 +190,7 @@ class TVM_DLL ModuleNode : public Object {
   virtual void SetSource(const String& code);
   virtual String GetPureSource(const String& format = "");
   virtual void SetPureSource(const String& clean_code);
+  virtual void CompileSource();
   /*!
    * \brief Get the format of the module, when available.
    * \return Possible format when available.

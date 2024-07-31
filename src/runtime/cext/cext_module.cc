@@ -27,6 +27,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <chrono>
 
 #include "../file_utils.h"
 #include "../meta_data.h"
@@ -65,6 +66,26 @@ class CEXTModuleNode : public runtime::ModuleNode {
             }
         }
 
+        void CompileSource() final {
+            std::string func_name = "default_function_kernel";
+            std::cout << "fmap size: " << fmap_.size() << "\n";
+            ICHECK_EQ(fmap_.size(), 1);
+            auto it = fmap_.find(func_name);
+            // if (it == fmap_.end())  return PackedFunc();
+            const FunctionInfo& info = it->second;
+
+            // get c device code, compile to dynamic lib
+            auto num_void_args = info.arg_types.size();
+            auto arg_types = info.arg_types;
+            std::string c_source_code = code_;
+            std::string c_header_code = GetHeaderCode();
+            std::string c_bridge_code = GenBridgeCode(num_void_args, func_name, arg_types);
+            std::string c_merged_code = c_header_code + c_source_code + c_bridge_code;
+            std::string lib_name = CompileStringCode(c_merged_code, func_name, "./tmp/");
+            lib_name_ = lib_name;
+            std::cout << "@@@@@@@@@@----> " << lib_name_ << "\n";
+        }
+
         String GetSource(const String& format) final {
             if (format == fmt_) return code_;
             if (code_.length() != 0) {
@@ -85,6 +106,9 @@ class CEXTModuleNode : public runtime::ModuleNode {
                 return "";
             }
         }
+    
+        // path the compiled lib 
+        std::string lib_name_;
 
     private:
         // codegen c source code
@@ -113,25 +137,22 @@ class CEXTWrappedFunc {
 
         // invoke the function with void arguments
         void operator()(TVMArgs args, TVMRetValue* rv, void** void_args) const {
-            // get c device code, compile to dynamic lib
-            std::string c_source_code = m_->GetSource("c");
-            std::string c_header_code = GetHeaderCode();
-            std::string c_bridge_code = GenBridgeCode(num_void_args_, func_name_, arg_types_);
-            std::string c_merged_code = c_header_code + c_source_code + c_bridge_code;
-            std::string lib_name = CompileStringCode(c_merged_code, func_name_, "./tmp/");
-            // std::cout << "@@@@@@@@@@----> " << lib_name << "\n";
-
             // launch c kernel
-            CEXTResult result = cextLaunchKernel(void_args, func_name_, lib_name);
+            // auto start = std::chrono::high_resolution_clock::now();
+            CEXTResult result = cextLaunchKernel(void_args, func_name_, m_->lib_name_);
+            // auto end = std::chrono::high_resolution_clock::now();
+            // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            // std::cout << "Execution time: " << duration << "\n";
+
             if (result != CEXTResult::CEXT_SUCCESS) {
                 std::ostringstream os;
                 os << "CEXTLaunch Error: " << static_cast<int>(result) << "\n"
                    << "num_void_args = " << num_void_args_ << ", "
                    << "func_name = " << func_name_ << ", "
-                   << "lib_name = " << lib_name << "\n";
-                os << "// CEXT Source \n"
-                   << "// -------------\n"
-                   << c_merged_code;
+                   << "lib_name = " << m_->lib_name_ << "\n";
+                // os << "// CEXT Source \n"
+                //    << "// -------------\n"
+                //    << c_merged_code;
                 
                 LOG(FATAL) << os.str();
             }

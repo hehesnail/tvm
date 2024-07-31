@@ -117,6 +117,10 @@ void ModuleNode::SetPureSource(const String& clean_code) {
   LOG(FATAL) << "Module[" << type_key() << "] does not support SetPureSource";
 }
 
+void ModuleNode::CompileSource() {
+    LOG(FATAL) << "Module[" << type_key() << "] does not support CompileSource";
+}
+
 const PackedFunc* ModuleNode::GetFuncFromEnv(const String& name) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = import_cache_.find(name);
@@ -195,6 +199,10 @@ TVM_REGISTER_GLOBAL("runtime.ModuleSetSource").set_body_typed([](Module mod, std
 
 TVM_REGISTER_GLOBAL("runtime.ModuleGetPureSource").set_body_typed([](Module mod, std::string fmt) {
   return mod->GetPureSource(fmt);
+});
+
+TVM_REGISTER_GLOBAL("runtime.ModuleCompileSource").set_body_typed([](Module mod) {
+  return mod->CompileSource();
 });
 
 TVM_REGISTER_GLOBAL("runtime.ModuleImportsSize").set_body_typed([](Module mod) {

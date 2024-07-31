@@ -161,17 +161,19 @@ def test_cext_module_save():
         os.mkdir(os.path.join(save_path, host_path))
         os.mkdir(os.path.join(save_path, device_path))
 
-    host_module.save(os.path.join(save_path, host_path, "topology_expansion_[['add', 'cos', 'asin', 'ceil']]_[[12, 1, 18], [16, 3, 1], [12, 1, 18]]"), "ll")
-    device_module.save(os.path.join(save_path, device_path, "topology_expansion_[['add', 'cos', 'asin', 'ceil']]_[[12, 1, 18], [16, 3, 1], [12, 1, 18]]"), "c")
+    host_module.save(os.path.join(save_path, host_path, "host_mod"), "ll")
+    device_module.save(os.path.join(save_path, device_path, "dev_mod"), "c")
 
 def test_cext_module_load():
     target = tvm.target.Target(target="c", host="llvm")
     save_path = "temp_saved_modules"
+    host_path = "host_module"
+    device_path = "device_module"
     if not os.path.exists(save_path):
         raise Exception(f"{save_path} not found")
 
-    host_module = load_module(os.path.join(save_path, "host_module"), "ll")
-    device_module = load_module(os.path.join(save_path, "device_module"), "c")
+    host_module = load_module(os.path.join(save_path, host_path, "host_mod"), "ll")
+    device_module = load_module(os.path.join(save_path, device_path,  "dev_mod"), "c")
     host_module.import_module(device_module)
 
     print(host_module.imported_modules[0].get_source())
@@ -190,6 +192,7 @@ def test_cext_module_load():
     """
     host_module.imported_modules[0].set_source(c_code)
     print(host_module.imported_modules[0].get_source())
+    device_module.compile_source()
 
     dev = tvm.device(target.kind.name, 0)
     M, K, N = 4, 4, 4
@@ -215,5 +218,5 @@ if __name__ == "__main__":
     # test_omp()
     # test_load_c_source()
     # test_cuda()
-    test_cext_module_save()
-    # test_cext_module_load()
+    # test_cext_module_save()
+    test_cext_module_load()

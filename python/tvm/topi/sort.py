@@ -203,3 +203,40 @@ def topk(data, k=1, axis=-1, ret_type="both", is_ascend=False, dtype="int64"):
         tag="topk_cpu",
     )
     return out
+
+
+def argsort_ir(data_buf, out_index_buf):
+    batch, nums = get_const_tuple(data_buf.shape)
+    ib = tvm.tir.ir_builder.create()
+    p_data = ib.buffer_ptr(data_buf)
+    index_out = ib.buffer_ptr(out_index_buf)
+    temp_data = ib.allocate("float32", (1,), name="temp_data", scope="global")
+    temp_index = ib.allocate("int32", (1,), name="temp_index", scope="global")
+    idxm = tvm.tir.indexmod
+    with ib.for_range(0, batch, kind="parallel") as b:
+        start = b * nums
+        for i in range(2):
+            with ib.for_range(0, (nums + 1) // 2) as tid:
+                bid = tid * 2 + i
+                with ib.if_scope(bid < nums):
+                    index_out[start + bid] = bid
+        with ib.for_range(0, nums) as k:
+            with ib.for_range(0, (nums + 1) // 2) as tid:
+                offset = start + 2 * tid + idxm(k, 2)
+                with ib.if_scope(
+                    tvm.tir.all(offset + 1 < nums, p_data[offset] < p_data[offset + 1])
+                ):
+                    temp_data[0] = p_data[offset]
+                    p_data[offset] = p_data[offset + 1]
+                    p_data[offset + 1] = temp_data[0]
+                    temp_index[0] = index_out[offset]
+                    index_out[offset] = index_out[offset + 1]
+                    index_out[offset + 1] = temp_index[0]
+    return ib.get()
+
+
+def argsort_c(data):
+    sorted_index = te.extern(
+        [data.shape], [data], lambda ins, outs: argsort_ir(ins[0], outs[0]), dtype="int32"
+    )
+    return sorted_index
